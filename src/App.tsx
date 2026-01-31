@@ -36,6 +36,7 @@ export default function App() {
   // OCR State
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [ocrResult, setOcrResult] = useState<{ text: string; target: 'input' | 'todo'; todoId?: number } | null>(null);
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window) {
@@ -115,6 +116,12 @@ export default function App() {
   const handleOcr = async (imageSource: Blob | string, target: 'input' | 'todo', todoId?: number) => {
     const text = await recognizeText(imageSource);
     if (!text) return;
+    setOcrResult({ text, target, todoId });
+  };
+
+  const confirmOcr = async () => {
+    if (!ocrResult) return;
+    const { text, target, todoId } = ocrResult;
 
     if (target === 'input') {
       setInputDescription(prev => (prev ? prev + '\n' + text : text));
@@ -126,6 +133,7 @@ export default function App() {
         });
       }
     }
+    setOcrResult(null);
   };
 
   const addTodo = async (e: React.FormEvent) => {
@@ -207,6 +215,27 @@ export default function App() {
           <div className="ocr-loader-content glass-card">
             <Loader2 className="spinner" size={32} />
             <p>텍스트 스캔 중... {scanProgress}%</p>
+          </div>
+        </div>
+      )}
+
+      {ocrResult && (
+        <div className="ocr-modal-overlay">
+          <div className="ocr-modal-content glass-card">
+            <h3>스캔 결과 확인 및 수정</h3>
+            <textarea
+              className="ocr-textarea"
+              value={ocrResult.text}
+              onChange={(e) => setOcrResult({ ...ocrResult, text: e.target.value })}
+            />
+            <div className="ocr-modal-actions">
+              <button className="ocr-cancel-btn glass-card" onClick={() => setOcrResult(null)}>
+                취소
+              </button>
+              <button className="ocr-confirm-btn premium-button" onClick={confirmOcr}>
+                저장하기
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -378,6 +407,15 @@ export default function App() {
         .ocr-loader-content { padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 16px; border: 1px solid rgba(255,255,255,0.2); }
         .spinner { animation: spin 1s linear infinite; color: var(--accent-primary); }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .ocr-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 1001; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .ocr-modal-content { width: 100%; max-width: 500px; padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid rgba(255,255,255,0.2); }
+        .ocr-modal-content h3 { font-size: 18px; font-weight: 700; color: white; }
+        .ocr-textarea { width: 100%; height: 200px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; color: white; font-size: 14px; line-height: 1.6; outline: none; resize: none; }
+        .ocr-textarea:focus { border-color: var(--accent-primary); }
+        .ocr-modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+        .ocr-cancel-btn { padding: 8px 20px; color: white; cursor: pointer; }
+        .ocr-confirm-btn { padding: 8px 24px; cursor: pointer; font-size: 14px; }
 
         .tabs { display: flex; padding: 6px; gap: 4px; margin-bottom: 24px; }
         .tabs button { flex: 1; background: transparent; border: none; color: var(--text-secondary); padding: 10px; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
