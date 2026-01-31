@@ -150,6 +150,10 @@ export default function App() {
     setOcrResult(null);
   };
 
+  const removeTodoImage = async (id?: number) => {
+    if (id) await db.todos.update(id, { image: undefined });
+  };
+
   const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputTitle.trim()) return;
@@ -387,6 +391,9 @@ export default function App() {
                           <div className="todo-multimedia">
                             <div className="todo-image-container">
                               <img src={URL.createObjectURL(todo.image)} alt="Task" className="todo-image" />
+                              <button className="remove-saved-img" onClick={() => removeTodoImage(todo.id)}>
+                                <X size={12} />
+                              </button>
                             </div>
                             <button className="ocr-mini-btn glass-card" onClick={() => todo.image && handleOcr(todo.image, 'todo', todo.id)}>
                               <FileText size={12} />
@@ -466,8 +473,10 @@ export default function App() {
         .todo-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; }
         
         .todo-multimedia { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 200px; }
-        .todo-image-container { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .todo-image-container { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); position: relative; }
         .todo-image { width: 100%; height: auto; display: block; }
+        .remove-saved-img { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+        .remove-saved-img:hover { background: #ef4444; transform: scale(1.1); }
         .ocr-mini-btn { align-self: flex-start; display: flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 10px; color: white; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
         
         .todo-item.completed { opacity: 0.6; }
