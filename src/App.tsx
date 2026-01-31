@@ -291,16 +291,6 @@ export default function App() {
                 <button type="button" className={`icon-btn ${isListening && listeningTarget === 'title' ? 'listening' : ''}`} onClick={() => toggleListening('title')}>
                   {isListening && listeningTarget === 'title' ? <MicOff size={20} color="#ef4444" /> : <Mic size={20} />}
                 </button>
-                <button type="button" className="icon-btn" onClick={() => fileInputRef.current?.click()}>
-                  <Camera size={20} />
-                </button>
-                <input
-                  type="file"
-                  hidden
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleImageChange}
-                />
               </div>
             </div>
             <div className="desc-row">
@@ -315,6 +305,16 @@ export default function App() {
                 <button type="button" className={`icon-btn ${isListening && listeningTarget === 'description' ? 'listening' : ''}`} onClick={() => toggleListening('description')}>
                   {isListening && listeningTarget === 'description' ? <MicOff size={20} color="#ef4444" /> : <Mic size={20} />}
                 </button>
+                <button type="button" className="icon-btn" onClick={() => fileInputRef.current?.click()}>
+                  <Camera size={20} />
+                </button>
+                <input
+                  type="file"
+                  hidden
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
               </div>
             </div>
             {imagePreview && (
@@ -449,7 +449,7 @@ export default function App() {
         .input-fields { flex: 1; display: flex; flex-direction: column; gap: 10px; }
         .title-row { display: flex; align-items: center; gap: 8px; }
         .title-input { flex: 1; background: transparent; border: none; padding: 4px; color: white; outline: none; font-size: 18px; font-weight: 700; }
-        .input-actions { display: flex; gap: 8px; min-width: 80px; justify-content: flex-end; }
+        .input-actions { display: flex; gap: 8px; min-width: 80px; justify-content: flex-start; }
         .icon-btn { background: rgba(255,255,255,0.05); border: none; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
         .icon-btn:hover { background: rgba(255,255,255,0.15); }
         .listening { animation: pulse 1.5s infinite; background: rgba(239, 68, 68, 0.2); }
