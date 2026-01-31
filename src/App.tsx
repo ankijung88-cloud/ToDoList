@@ -311,9 +311,11 @@ export default function App() {
                 value={inputDescription}
                 onChange={(e) => setInputDescription(e.target.value)}
               />
-              <button type="button" className={`icon-btn mini-mic ${isListening && listeningTarget === 'description' ? 'listening' : ''}`} onClick={() => toggleListening('description')}>
-                {isListening && listeningTarget === 'description' ? <MicOff size={16} color="#ef4444" /> : <Mic size={16} />}
-              </button>
+              <div className="input-actions">
+                <button type="button" className={`icon-btn ${isListening && listeningTarget === 'description' ? 'listening' : ''}`} onClick={() => toggleListening('description')}>
+                  {isListening && listeningTarget === 'description' ? <MicOff size={20} color="#ef4444" /> : <Mic size={20} />}
+                </button>
+              </div>
             </div>
             {imagePreview && (
               <div className="image-preview-wrapper">
@@ -447,16 +449,14 @@ export default function App() {
         .input-fields { flex: 1; display: flex; flex-direction: column; gap: 10px; }
         .title-row { display: flex; align-items: center; gap: 8px; }
         .title-input { flex: 1; background: transparent; border: none; padding: 4px; color: white; outline: none; font-size: 18px; font-weight: 700; }
-        .input-actions { display: flex; gap: 8px; }
-        .icon-btn { background: rgba(255,255,255,0.05); border: none; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .input-actions { display: flex; gap: 8px; min-width: 80px; justify-content: flex-end; }
+        .icon-btn { background: rgba(255,255,255,0.05); border: none; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
         .icon-btn:hover { background: rgba(255,255,255,0.15); }
         .listening { animation: pulse 1.5s infinite; background: rgba(239, 68, 68, 0.2); }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         
         .desc-row { display: flex; align-items: center; gap: 8px; }
         .desc-input { flex: 1; background: transparent; border: none; padding: 4px; color: var(--text-secondary); outline: none; font-size: 14px; }
-        .mini-mic { width: 28px; height: 28px; opacity: 0.6; }
-        .mini-mic:hover { opacity: 1; }
         
         .image-preview-wrapper { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
         .image-preview-container { position: relative; width: fit-content; }
