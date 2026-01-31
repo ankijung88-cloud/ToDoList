@@ -25,6 +25,7 @@ export default function App() {
 
   // Voice State
   const [isListening, setIsListening] = useState(false);
+  const [listeningTarget, setListeningTarget] = useState<'title' | 'description' | null>(null);
   const recognitionRef = useRef<any>(null);
 
   // Image State
@@ -46,7 +47,11 @@ export default function App() {
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        setInputTitle(prev => (prev ? prev + ' ' + transcript : transcript));
+        if (listeningTarget === 'title') {
+          setInputTitle(prev => (prev ? prev + ' ' + transcript : transcript));
+        } else if (listeningTarget === 'description') {
+          setInputDescription(prev => (prev ? prev + ' ' + transcript : transcript));
+        }
         setIsListening(false);
       };
 
@@ -57,17 +62,19 @@ export default function App() {
 
       recognitionRef.current.onend = () => {
         setIsListening(false);
+        setListeningTarget(null);
       };
     }
-  }, []);
+  }, [listeningTarget]);
 
-  const toggleListening = () => {
+  const toggleListening = (target: 'title' | 'description') => {
     if (isListening) {
       recognitionRef.current?.stop();
-    } else {
-      recognitionRef.current?.start();
-      setIsListening(true);
+      if (listeningTarget === target) return;
     }
+    setListeningTarget(target);
+    recognitionRef.current?.start();
+    setIsListening(true);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,8 +241,8 @@ export default function App() {
                 onChange={(e) => setInputTitle(e.target.value)}
               />
               <div className="input-actions">
-                <button type="button" className={`icon-btn ${isListening ? 'listening' : ''}`} onClick={toggleListening}>
-                  {isListening ? <MicOff size={20} color="#ef4444" /> : <Mic size={20} />}
+                <button type="button" className={`icon-btn ${isListening && listeningTarget === 'title' ? 'listening' : ''}`} onClick={() => toggleListening('title')}>
+                  {isListening && listeningTarget === 'title' ? <MicOff size={20} color="#ef4444" /> : <Mic size={20} />}
                 </button>
                 <button type="button" className="icon-btn" onClick={() => fileInputRef.current?.click()}>
                   <Camera size={20} />
@@ -249,13 +256,18 @@ export default function App() {
                 />
               </div>
             </div>
-            <input
-              type="text"
-              className="desc-input"
-              placeholder="상세 설명 (선택 사항)"
-              value={inputDescription}
-              onChange={(e) => setInputDescription(e.target.value)}
-            />
+            <div className="desc-row">
+              <input
+                type="text"
+                className="desc-input"
+                placeholder="상세 설명 (선택 사항)"
+                value={inputDescription}
+                onChange={(e) => setInputDescription(e.target.value)}
+              />
+              <button type="button" className={`icon-btn mini-mic ${isListening && listeningTarget === 'description' ? 'listening' : ''}`} onClick={() => toggleListening('description')}>
+                {isListening && listeningTarget === 'description' ? <MicOff size={16} color="#ef4444" /> : <Mic size={16} />}
+              </button>
+            </div>
             {imagePreview && (
               <div className="image-preview-wrapper">
                 <div className="image-preview-container">
@@ -382,7 +394,10 @@ export default function App() {
         .listening { animation: pulse 1.5s infinite; background: rgba(239, 68, 68, 0.2); }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         
-        .desc-input { background: transparent; border: none; padding: 4px; color: var(--text-secondary); outline: none; font-size: 14px; }
+        .desc-row { display: flex; align-items: center; gap: 8px; }
+        .desc-input { flex: 1; background: transparent; border: none; padding: 4px; color: var(--text-secondary); outline: none; font-size: 14px; }
+        .mini-mic { width: 28px; height: 28px; opacity: 0.6; }
+        .mini-mic:hover { opacity: 1; }
         
         .image-preview-wrapper { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
         .image-preview-container { position: relative; width: fit-content; }
