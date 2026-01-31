@@ -1,81 +1,115 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar, ListTodo, Target, Edit2, Check, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar, ListTodo, Target, Edit2, Check, X, Mic, MicOff, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface Todo {
-  id: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  type: 'day' | 'month' | 'year';
-  createdAt: number;
-}
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, type Todo } from './db/todoDB';
 
 type TabType = 'day' | 'month' | 'year';
 
+// Add type for SpeechRecognition
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+  }
+}
+
 export default function App() {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const todos = useLiveQuery(() => db.todos.reverse().toArray()) || [];
   const [inputTitle, setInputTitle] = useState('');
   const [inputDescription, setInputDescription] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('day');
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
 
-  // Load from localStorage
+  // Voice State
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Image State
+  const [pendingImage, setPendingImage] = useState<Blob | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    const saved = localStorage.getItem('trendy-todos');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Migration: Handle old todos that only have 'text'
-      const migrated = parsed.map((todo: any) => ({
-        ...todo,
-        title: todo.title || todo.text || '',
-        description: todo.description || '',
-      }));
-      setTodos(migrated);
+    if ('webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'ko-KR';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInputTitle(prev => (prev ? prev + ' ' + transcript : transcript));
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
     }
-    setIsInitialized(true);
   }, []);
 
-  // Save to localStorage
-  useEffect(() => {
-    if (isInitialized) {
-      localStorage.setItem('trendy-todos', JSON.stringify(todos));
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      recognitionRef.current?.start();
+      setIsListening(true);
     }
-  }, [todos, isInitialized]);
+  };
 
-  const addTodo = (e: React.FormEvent) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPendingImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputTitle.trim()) return;
 
-    const newTodo: Todo = {
-      id: crypto.randomUUID(),
+    await db.todos.add({
       title: inputTitle.trim(),
       description: inputDescription.trim(),
       completed: false,
       type: activeTab,
+      image: pendingImage || undefined,
       createdAt: Date.now()
-    };
+    });
 
-    setTodos([newTodo, ...todos]);
     setInputTitle('');
     setInputDescription('');
+    setPendingImage(null);
+    setImagePreview(null);
   };
 
-  const toggleTodo = (id: string) => {
-    setTodos(todos.map(todo =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ));
+  const toggleTodo = async (id?: number) => {
+    if (!id) return;
+    const todo = await db.todos.get(id);
+    if (todo) {
+      await db.todos.update(id, { completed: !todo.completed });
+    }
   };
 
-  const deleteTodo = (id: string) => {
-    setTodos(todos.filter(todo => todo.id !== id));
+  const deleteTodo = async (id?: number) => {
+    if (id) await db.todos.delete(id);
   };
 
   const startEdit = (todo: Todo) => {
-    setEditingId(todo.id);
+    setEditingId(todo.id!);
     setEditTitle(todo.title);
     setEditDescription(todo.description);
   };
@@ -86,11 +120,12 @@ export default function App() {
     setEditDescription('');
   };
 
-  const saveEdit = (id: string) => {
-    if (!editTitle.trim()) return;
-    setTodos(todos.map(todo =>
-      todo.id === id ? { ...todo, title: editTitle.trim(), description: editDescription.trim() } : todo
-    ));
+  const saveEdit = async (id?: number) => {
+    if (!id || !editTitle.trim()) return;
+    await db.todos.update(id, {
+      title: editTitle.trim(),
+      description: editDescription.trim()
+    });
     setEditingId(null);
     setEditTitle('');
     setEditDescription('');
@@ -106,7 +141,6 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Background decoration */}
       <div className="bg-glow bg-glow-1"></div>
       <div className="bg-glow bg-glow-2"></div>
 
@@ -118,26 +152,17 @@ export default function App() {
       </header>
 
       <nav className="tabs glass-card">
-        <button
-          className={activeTab === 'day' ? 'active' : ''}
-          onClick={() => setActiveTab('day')}
-        >
+        <button className={activeTab === 'day' ? 'active' : ''} onClick={() => setActiveTab('day')}>
           <Calendar size={18} />
           <span>오늘</span>
           {stats.day > 0 && <span className="badge">{stats.day}</span>}
         </button>
-        <button
-          className={activeTab === 'month' ? 'active' : ''}
-          onClick={() => setActiveTab('month')}
-        >
+        <button className={activeTab === 'month' ? 'active' : ''} onClick={() => setActiveTab('month')}>
           <ListTodo size={18} />
           <span>이번 달</span>
           {stats.month > 0 && <span className="badge">{stats.month}</span>}
         </button>
-        <button
-          className={activeTab === 'year' ? 'active' : ''}
-          onClick={() => setActiveTab('year')}
-        >
+        <button className={activeTab === 'year' ? 'active' : ''} onClick={() => setActiveTab('year')}>
           <Target size={18} />
           <span>올해</span>
           {stats.year > 0 && <span className="badge">{stats.year}</span>}
@@ -147,23 +172,45 @@ export default function App() {
       <main>
         <form onSubmit={addTodo} className="input-group glass-card combined-input">
           <div className="input-fields">
-            <input
-              type="text"
-              className="title-input"
-              placeholder={
-                activeTab === 'day' ? '오늘의 할 일 제목...' :
-                  activeTab === 'month' ? '이번 달 목표 제목...' : '올해의 계획 제목...'
-              }
-              value={inputTitle}
-              onChange={(e) => setInputTitle(e.target.value)}
-            />
+            <div className="title-row">
+              <input
+                type="text"
+                className="title-input"
+                placeholder={activeTab === 'day' ? '오늘의 할 일...' : activeTab === 'month' ? '이번 달 목표...' : '올해의 계획...'}
+                value={inputTitle}
+                onChange={(e) => setInputTitle(e.target.value)}
+              />
+              <div className="input-actions">
+                <button type="button" className={`icon-btn ${isListening ? 'listening' : ''}`} onClick={toggleListening}>
+                  {isListening ? <MicOff size={20} color="#ef4444" /> : <Mic size={20} />}
+                </button>
+                <button type="button" className="icon-btn" onClick={() => fileInputRef.current?.click()}>
+                  <Camera size={20} />
+                </button>
+                <input
+                  type="file"
+                  hidden
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+              </div>
+            </div>
             <input
               type="text"
               className="desc-input"
-              placeholder="상세 내용 (선택 사항)"
+              placeholder="상세 설명 (선택 사항)"
               value={inputDescription}
               onChange={(e) => setInputDescription(e.target.value)}
             />
+            {imagePreview && (
+              <div className="image-preview-container">
+                <img src={imagePreview} alt="Preview" className="image-preview" />
+                <button type="button" className="remove-img" onClick={() => { setPendingImage(null); setImagePreview(null); }}>
+                  <X size={14} />
+                </button>
+              </div>
+            )}
           </div>
           <button type="submit" className="premium-button add-btn">
             <Plus size={28} />
@@ -173,13 +220,9 @@ export default function App() {
         <div className="todo-list">
           <AnimatePresence mode="popLayout">
             {filteredTodos.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="empty-state"
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-state">
                 <div className="glass-card">
-                  <p>할 일이 없습니다. 새로운 목표를 추가해보세요!</p>
+                  <p>할 일이 없거나 모두 완료했습니다! 🙌</p>
                 </div>
               </motion.div>
             ) : (
@@ -208,26 +251,17 @@ export default function App() {
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         autoFocus
-                        placeholder="제목"
                       />
                       <input
                         type="text"
                         className="edit-desc"
                         value={editDescription}
                         onChange={(e) => setEditDescription(e.target.value)}
-                        placeholder="상세 내용"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit(todo.id);
-                          if (e.key === 'Escape') cancelEdit();
-                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEdit(todo.id)}
                       />
                       <div className="edit-actions">
-                        <button className="save-btn" onClick={() => saveEdit(todo.id)}>
-                          <Check size={20} />
-                        </button>
-                        <button className="cancel-btn" onClick={() => cancelEdit()}>
-                          <X size={20} />
-                        </button>
+                        <button className="save-btn" onClick={() => saveEdit(todo.id)}><Check size={20} /></button>
+                        <button className="cancel-btn" onClick={() => cancelEdit()}><X size={20} /></button>
                       </div>
                     </div>
                   ) : (
@@ -235,14 +269,15 @@ export default function App() {
                       <div className="todo-content">
                         <span className="todo-title">{todo.title}</span>
                         {todo.description && <span className="todo-desc">{todo.description}</span>}
+                        {todo.image && (
+                          <div className="todo-image-container">
+                            <img src={URL.createObjectURL(todo.image)} alt="Task" className="todo-image" />
+                          </div>
+                        )}
                       </div>
                       <div className="item-actions">
-                        <button className="edit-btn" onClick={() => startEdit(todo)}>
-                          <Edit2 size={18} />
-                        </button>
-                        <button className="delete-btn" onClick={() => deleteTodo(todo.id)}>
-                          <Trash2 size={18} />
-                        </button>
+                        <button className="edit-btn" onClick={() => startEdit(todo)}><Edit2 size={18} /></button>
+                        <button className="delete-btn" onClick={() => deleteTodo(todo.id)}><Trash2 size={18} /></button>
                       </div>
                     </>
                   )}
@@ -254,270 +289,65 @@ export default function App() {
       </main>
 
       <style>{`
-        .app-container {
-          padding: 24px 20px 100px;
-          position: relative;
-          z-index: 1;
-        }
+        .app-container { padding: 24px 20px 100px; position: relative; z-index: 1; }
+        .bg-glow { position: fixed; width: 300px; height: 300px; filter: blur(80px); z-index: -1; opacity: 0.3; border-radius: 50%; }
+        .bg-glow-1 { background: var(--accent-primary); top: -100px; right: -100px; }
+        .bg-glow-2 { background: var(--accent-secondary); bottom: -100px; left: -100px; }
+        header { margin-bottom: 24px; }
+        header h1 { font-size: 32px; font-weight: 800; background: linear-gradient(to right, #fff, rgba(255,255,255,0.6)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        header p { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+        .tabs { display: flex; padding: 6px; gap: 4px; margin-bottom: 24px; }
+        .tabs button { flex: 1; background: transparent; border: none; color: var(--text-secondary); padding: 10px; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+        .tabs button.active { background: rgba(255, 255, 255, 0.1); color: white; }
+        .badge { position: absolute; top: 6px; right: 12px; background: var(--accent-primary); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; min-width: 14px; }
+        
+        .combined-input { display: flex; flex-direction: row; align-items: center; padding: 12px; gap: 12px; margin-bottom: 24px; }
+        .input-fields { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .title-row { display: flex; align-items: center; gap: 8px; }
+        .title-input { flex: 1; background: transparent; border: none; padding: 4px; color: white; outline: none; font-size: 18px; font-weight: 700; }
+        .input-actions { display: flex; gap: 8px; }
+        .icon-btn { background: rgba(255,255,255,0.05); border: none; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .icon-btn:hover { background: rgba(255,255,255,0.15); }
+        .listening { animation: pulse 1.5s infinite; background: rgba(239, 68, 68, 0.2); }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        
+        .desc-input { background: transparent; border: none; padding: 4px; color: var(--text-secondary); outline: none; font-size: 14px; }
+        
+        .image-preview-container { position: relative; width: fit-content; margin-top: 4px; }
+        .image-preview { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); }
+        .remove-img { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
 
-        .bg-glow {
-          position: fixed;
-          width: 300px;
-          height: 300px;
-          filter: blur(80px);
-          z-index: -1;
-          opacity: 0.3;
-          border-radius: 50%;
-        }
-
-        .bg-glow-1 {
-          background: var(--accent-primary);
-          top: -100px;
-          right: -100px;
-        }
-
-        .bg-glow-2 {
-          background: var(--accent-secondary);
-          bottom: -100px;
-          left: -100px;
-        }
-
-        header {
-          margin-bottom: 24px;
-        }
-
-        header h1 {
-          font-size: 32px;
-          font-weight: 800;
-          background: linear-gradient(to right, #fff, rgba(255,255,255,0.6));
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        header p {
-          font-size: 14px;
-          color: var(--text-secondary);
-          margin-top: 4px;
-        }
-
-        .tabs {
-          display: flex;
-          padding: 6px;
-          gap: 4px;
-          margin-bottom: 24px;
-        }
-
-        .tabs button {
-          flex: 1;
-          background: transparent;
-          border: none;
-          color: var(--text-secondary);
-          padding: 10px;
-          border-radius: 14px;
-          font-size: 13px;
-          font-weight: 600;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-        }
-
-        .tabs button.active {
-          background: rgba(255, 255, 255, 0.1);
-          color: white;
-          box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
-        }
-
-        .badge {
-          position: absolute;
-          top: 6px;
-          right: 12px;
-          background: var(--accent-primary);
-          color: white;
-          font-size: 10px;
-          padding: 2px 6px;
-          border-radius: 10px;
-          min-width: 14px;
-        }
-
-        .combined-input {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          padding: 12px;
-          gap: 12px;
-          margin-bottom: 24px;
-        }
-
-        .input-fields {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .input-fields input {
-          background: transparent;
-          border: none;
-          padding: 4px;
-          color: white;
-          outline: none;
-        }
-
-        .title-input {
-          font-size: 18px;
-          font-weight: 700;
-        }
-
-        .desc-input {
-          font-size: 14px;
-          color: var(--text-secondary);
-        }
-
-        .add-btn {
-          width: 56px;
-          height: 56px;
-          border-radius: 16px;
-          padding: 0;
-        }
-
-        .todo-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .todo-item {
-          display: flex;
-          align-items: flex-start;
-          padding: 18px;
-          gap: 14px;
-          transition: all 0.3s;
-        }
-
-        .todo-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          padding-top: 2px;
-        }
-
-        .todo-title {
-          font-size: 17px;
-          font-weight: 600;
-          line-height: 1.4;
-        }
-
-        .todo-desc {
-          font-size: 13px;
-          color: var(--text-secondary);
-          line-height: 1.5;
-        }
-
-        .todo-item.completed {
-          opacity: 0.6;
-        }
-
-        .todo-item.completed .todo-title,
-        .todo-item.completed .todo-desc {
-          text-decoration: line-through;
-          color: var(--text-secondary);
-        }
-
-        .item-actions {
-          display: flex;
-          gap: 8px;
-          opacity: 0.6;
-          transition: opacity 0.2s;
-          padding-top: 2px;
-        }
-
-        .todo-item:hover .item-actions {
-          opacity: 1;
-        }
-
-        .edit-container {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .edit-container input {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid var(--accent-primary);
-          border-radius: 8px;
-          padding: 8px 12px;
-          color: white;
-          outline: none;
-        }
-
-        .edit-title {
-          font-size: 16px;
-          font-weight: 600;
-        }
-
-        .edit-desc {
-          font-size: 14px;
-        }
-
-        .edit-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-        }
-
-        .edit-btn, .check-btn, .delete-btn, .save-btn, .cancel-btn {
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 4px;
-          border-radius: 8px;
-          transition: background 0.2s;
-        }
-
-        .edit-btn {
-          color: var(--text-secondary);
-        }
-
-        .edit-btn:hover {
-          background: rgba(255,255,255,0.1);
-          color: white;
-        }
-
-        .save-btn {
-          color: #10b981;
-        }
-
-        .cancel-btn {
-          color: #ef4444;
-        }
-
-        .delete-btn {
-          color: rgba(255, 255, 255, 0.3);
-          transition: color 0.2s;
-        }
-
-        .delete-btn:hover {
-          color: #ef4444;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding-top: 40px;
-        }
-
-        .empty-state .glass-card {
-          padding: 40px 20px;
-          color: var(--text-secondary);
-          font-size: 14px;
-        }
+        .add-btn { width: 56px; height: 56px; border-radius: 16px; padding: 0; }
+        
+        .todo-list { display: flex; flex-direction: column; gap: 12px; }
+        .todo-item { display: flex; align-items: flex-start; padding: 18px; gap: 14px; }
+        .todo-content { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+        .todo-title { font-size: 17px; font-weight: 600; line-height: 1.4; color: white; }
+        .todo-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+        .todo-image-container { margin-top: 8px; width: 100%; max-width: 200px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .todo-image { width: 100%; height: auto; display: block; }
+        
+        .todo-item.completed { opacity: 0.6; }
+        .todo-item.completed .todo-title, .todo-item.completed .todo-desc { text-decoration: line-through; }
+        
+        .item-actions { display: flex; gap: 8px; opacity: 0.6; transition: opacity 0.2s; padding-top: 2px; }
+        .todo-item:hover .item-actions { opacity: 1; }
+        
+        .edit-container { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .edit-container input { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--accent-primary); border-radius: 8px; padding: 8px 12px; color: white; outline: none; }
+        .edit-title { font-size: 16px; font-weight: 600; }
+        .edit-desc { font-size: 14px; }
+        .edit-actions { display: flex; justify-content: flex-end; gap: 12px; }
+        
+        .edit-btn, .check-btn, .delete-btn, .save-btn, .cancel-btn { background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 8px; }
+        .edit-btn { color: var(--text-secondary); }
+        .save-btn { color: #10b981; }
+        .cancel-btn { color: #ef4444; }
+        .delete-btn { color: rgba(255, 255, 255, 0.3); }
+        .delete-btn:hover { color: #ef4444; }
+        
+        .empty-state { text-align: center; padding-top: 40px; }
+        .empty-state .glass-card { padding: 40px 20px; color: var(--text-secondary); font-size: 14px; }
       `}</style>
     </div>
   );
