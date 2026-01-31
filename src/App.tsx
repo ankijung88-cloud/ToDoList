@@ -26,6 +26,7 @@ export default function App() {
   // Voice State
   const [isListening, setIsListening] = useState(false);
   const [listeningTarget, setListeningTarget] = useState<'title' | 'description' | null>(null);
+  const targetRef = useRef<'title' | 'description' | null>(null);
   const recognitionRef = useRef<any>(null);
 
   // Image State
@@ -39,7 +40,7 @@ export default function App() {
   const [ocrResult, setOcrResult] = useState<{ text: string; target: 'input' | 'todo'; todoId?: number } | null>(null);
 
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window) {
+    if ('webkitSpeechRecognition' in window && !recognitionRef.current) {
       const SpeechRecognition = window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
@@ -48,9 +49,11 @@ export default function App() {
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        if (listeningTarget === 'title') {
+        const currentTarget = targetRef.current;
+
+        if (currentTarget === 'title') {
           setInputTitle(prev => (prev ? prev + ' ' + transcript : transcript));
-        } else if (listeningTarget === 'description') {
+        } else if (currentTarget === 'description') {
           setInputDescription(prev => (prev ? prev + ' ' + transcript : transcript));
         }
         setIsListening(false);
@@ -64,18 +67,29 @@ export default function App() {
       recognitionRef.current.onend = () => {
         setIsListening(false);
         setListeningTarget(null);
+        targetRef.current = null;
       };
     }
-  }, [listeningTarget]);
+  }, []);
 
   const toggleListening = (target: 'title' | 'description') => {
     if (isListening) {
       recognitionRef.current?.stop();
       if (listeningTarget === target) return;
     }
+
+    targetRef.current = target;
     setListeningTarget(target);
-    recognitionRef.current?.start();
-    setIsListening(true);
+
+    try {
+      recognitionRef.current?.start();
+      setIsListening(true);
+    } catch (e) {
+      console.error("Speech recognition start failed", e);
+      setIsListening(false);
+      setListeningTarget(null);
+      targetRef.current = null;
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
