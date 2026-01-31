@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar, ListTodo, Target, Edit2, Check, X, Mic, MicOff, Camera } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar, ListTodo, Target, Edit2, Check, X, Mic, MicOff, Camera, FileText, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Todo } from './db/todoDB';
+import { createWorker } from 'tesseract.js';
 
 type TabType = 'day' | 'month' | 'year';
 
@@ -30,6 +31,10 @@ export default function App() {
   const [pendingImage, setPendingImage] = useState<Blob | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // OCR State
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window) {
@@ -74,6 +79,45 @@ export default function App() {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const recognizeText = async (image: Blob | string) => {
+    setIsScanning(true);
+    setScanProgress(0);
+    try {
+      const worker = await createWorker('kor+eng', 1, {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            setScanProgress(Math.floor(m.progress * 100));
+          }
+        }
+      });
+      const { data: { text } } = await worker.recognize(image);
+      await worker.terminate();
+      return text;
+    } catch (error) {
+      console.error('OCR Error:', error);
+      return '';
+    } finally {
+      setIsScanning(false);
+      setScanProgress(0);
+    }
+  };
+
+  const handleOcr = async (imageSource: Blob | string, target: 'input' | 'todo', todoId?: number) => {
+    const text = await recognizeText(imageSource);
+    if (!text) return;
+
+    if (target === 'input') {
+      setInputDescription(prev => (prev ? prev + '\n' + text : text));
+    } else if (target === 'todo' && todoId) {
+      const todo = await db.todos.get(todoId);
+      if (todo) {
+        await db.todos.update(todoId, {
+          description: todo.description ? todo.description + '\n' + text : text
+        });
+      }
     }
   };
 
@@ -151,6 +195,15 @@ export default function App() {
         </div>
       </header>
 
+      {isScanning && (
+        <div className="ocr-loader-overlay">
+          <div className="ocr-loader-content glass-card">
+            <Loader2 className="spinner" size={32} />
+            <p>텍스트 스캔 중... {scanProgress}%</p>
+          </div>
+        </div>
+      )}
+
       <nav className="tabs glass-card">
         <button className={activeTab === 'day' ? 'active' : ''} onClick={() => setActiveTab('day')}>
           <Calendar size={18} />
@@ -204,10 +257,16 @@ export default function App() {
               onChange={(e) => setInputDescription(e.target.value)}
             />
             {imagePreview && (
-              <div className="image-preview-container">
-                <img src={imagePreview} alt="Preview" className="image-preview" />
-                <button type="button" className="remove-img" onClick={() => { setPendingImage(null); setImagePreview(null); }}>
-                  <X size={14} />
+              <div className="image-preview-wrapper">
+                <div className="image-preview-container">
+                  <img src={imagePreview} alt="Preview" className="image-preview" />
+                  <button type="button" className="remove-img" onClick={() => { setPendingImage(null); setImagePreview(null); }}>
+                    <X size={14} />
+                  </button>
+                </div>
+                <button type="button" className="ocr-btn glass-card" onClick={() => pendingImage && handleOcr(pendingImage, 'input')}>
+                  <FileText size={14} />
+                  <span>텍스트 스캔</span>
                 </button>
               </div>
             )}
@@ -270,8 +329,14 @@ export default function App() {
                         <span className="todo-title">{todo.title}</span>
                         {todo.description && <span className="todo-desc">{todo.description}</span>}
                         {todo.image && (
-                          <div className="todo-image-container">
-                            <img src={URL.createObjectURL(todo.image)} alt="Task" className="todo-image" />
+                          <div className="todo-multimedia">
+                            <div className="todo-image-container">
+                              <img src={URL.createObjectURL(todo.image)} alt="Task" className="todo-image" />
+                            </div>
+                            <button className="ocr-mini-btn glass-card" onClick={() => todo.image && handleOcr(todo.image, 'todo', todo.id)}>
+                              <FileText size={12} />
+                              <span>글자 추출</span>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -296,6 +361,12 @@ export default function App() {
         header { margin-bottom: 24px; }
         header h1 { font-size: 32px; font-weight: 800; background: linear-gradient(to right, #fff, rgba(255,255,255,0.6)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         header p { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+        
+        .ocr-loader-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .ocr-loader-content { padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 16px; border: 1px solid rgba(255,255,255,0.2); }
+        .spinner { animation: spin 1s linear infinite; color: var(--accent-primary); }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
         .tabs { display: flex; padding: 6px; gap: 4px; margin-bottom: 24px; }
         .tabs button { flex: 1; background: transparent; border: none; color: var(--text-secondary); padding: 10px; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
         .tabs button.active { background: rgba(255, 255, 255, 0.1); color: white; }
@@ -313,9 +384,11 @@ export default function App() {
         
         .desc-input { background: transparent; border: none; padding: 4px; color: var(--text-secondary); outline: none; font-size: 14px; }
         
-        .image-preview-container { position: relative; width: fit-content; margin-top: 4px; }
+        .image-preview-wrapper { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+        .image-preview-container { position: relative; width: fit-content; }
         .image-preview { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); }
-        .remove-img { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
+        .remove-img { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+        .ocr-btn { display: flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); }
 
         .add-btn { width: 56px; height: 56px; border-radius: 16px; padding: 0; }
         
@@ -323,9 +396,12 @@ export default function App() {
         .todo-item { display: flex; align-items: flex-start; padding: 18px; gap: 14px; }
         .todo-content { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
         .todo-title { font-size: 17px; font-weight: 600; line-height: 1.4; color: white; }
-        .todo-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
-        .todo-image-container { margin-top: 8px; width: 100%; max-width: 200px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .todo-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; }
+        
+        .todo-multimedia { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 200px; }
+        .todo-image-container { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
         .todo-image { width: 100%; height: auto; display: block; }
+        .ocr-mini-btn { align-self: flex-start; display: flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 10px; color: white; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
         
         .todo-item.completed { opacity: 0.6; }
         .todo-item.completed .todo-title, .todo-item.completed .todo-desc { text-decoration: line-through; }
