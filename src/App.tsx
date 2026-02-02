@@ -261,7 +261,6 @@ export default function App() {
             <h1>My Goals</h1>
             <p className="current-date-display">
               {format(selectedDate, 'PPP EEEE', { locale: ko })}
-              {format(selectedDate, 'PPP EEEE', { locale: ko })}
               {activeTab === 'incomplete' ? (
                 <span className="date-context past">(과거 기록)</span>
               ) : activeTab === 'year' ? (
@@ -270,6 +269,7 @@ export default function App() {
                 <>
                   {isBefore(selectedDate, startOfToday()) && <span className="date-context past">(과거 기록)</span>}
                   {isAfter(selectedDate, startOfToday()) && <span className="date-context future">(미래 기록)</span>}
+                  {isSameDay(selectedDate, startOfToday()) && <span className="date-context current">(현재 기록)</span>}
                 </>
               )}
             </p>
@@ -398,20 +398,6 @@ export default function App() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       className={`todo-item glass-card ${todo.completed ? 'completed' : ''} ${editingId === todo.id ? 'editing' : ''}`}
                     >
-                      <button className="check-btn" onClick={() => toggleTodo(todo.id)}>
-                        {todo.completed ? (
-                          <CheckCircle2 color="var(--accent-secondary)" size={24} />
-                        ) : (
-                          <Circle color="#cbd5e1" size={24} />
-                        )}
-                      </button>
-
-                      {/* Show date badge in Incomplete AND Year tab */}
-                      {(activeTab === 'incomplete' || activeTab === 'year') && (
-                        <span className="todo-date-badge">
-                          {format(new Date(todo.createdAt), 'M.d')}
-                        </span>
-                      )}
 
                       {editingId === todo.id ? (
                         <div className="edit-container">
@@ -591,9 +577,10 @@ export default function App() {
         .header-content { display: flex; align-items: center; justify-content: space-between; }
         header h1 { font-size: 28px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
         .current-date-display { font-size: 14px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; }
-        .date-context { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+        .date-context { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 700; }
         .date-context.past { background: #ffeaa7; color: #d35400; }
         .date-context.future { background: #74c0fc; color: #1864ab; }
+        .date-context.current { background: #a29bfe; color: #4834d4; }
 
         .view-toggle-btn { background: white; border: none; padding: 10px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: var(--text-primary); cursor: pointer; transition: all 0.2s; }
         .view-toggle-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
