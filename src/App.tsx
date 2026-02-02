@@ -294,73 +294,69 @@ export default function App() {
           </nav>
 
           <main>
-            <form onSubmit={addTodo} className="input-group glass-card">
-              <div className="input-fields">
-                <div className="input-row">
-                  <input
-                    type="text"
-                    className="title-input"
-                    placeholder={activeTab === 'day' ? '할 일 제목...' : activeTab === 'incomplete' ? '미완료된 할 일...' : '목표 제목...'}
-                    value={inputTitle}
-                    onChange={(e) => setInputTitle(e.target.value)}
-                  />
-                  <div className="action-grid">
-                    <button type="button" className={`icon-btn ${isListening && listeningTarget === 'title' ? 'listening' : ''}`} onClick={() => toggleListening('title')}>
-                      {isListening && listeningTarget === 'title' ? <MicOff size={20} color="#ff6b6b" /> : <Mic size={20} />}
-                    </button>
-                    <div style={{ position: 'relative' }}>
-                      <button type="button" className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
-                        <Smile size={20} color={showEmojiPicker ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+            {activeTab !== 'incomplete' && (
+              <form onSubmit={addTodo} className="input-group glass-card">
+                <div className="input-fields">
+                  <div className="input-row">
+                    <input
+                      type="text"
+                      className="title-input"
+                      placeholder={activeTab === 'day' ? '할 일 제목...' : '목표 제목...'}
+                      value={inputTitle}
+                      onChange={(e) => setInputTitle(e.target.value)}
+                    />
+                    <div className="action-grid">
+                      <button type="button" className={`icon-btn ${isListening && listeningTarget === 'title' ? 'listening' : ''}`} onClick={() => toggleListening('title')}>
+                        {isListening && listeningTarget === 'title' ? <MicOff size={20} color="#ff6b6b" /> : <Mic size={20} />}
                       </button>
-                      {showEmojiPicker && (
-                        <div style={{ position: 'absolute', top: '40px', right: 0, zIndex: 10 }}>
-                          <EmojiPicker
-                            onEmojiClick={(emojiObject: any) => {
-                              setInputTitle(prev => prev + emojiObject.emoji);
-                              setShowEmojiPicker(false);
-                            }}
-                            width={300}
-                            height={400}
-                          />
-                        </div>
-                      )}
+                      <div style={{ position: 'relative' }}>
+                        <button type="button" className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+                          <Smile size={20} color={showEmojiPicker ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                        </button>
+                        {showEmojiPicker && (
+                          <div style={{ position: 'absolute', top: '40px', right: 0, zIndex: 10 }}>
+                            <EmojiPicker
+                              onEmojiClick={(emojiObject: any) => {
+                                setInputTitle(prev => prev + emojiObject.emoji);
+                                setShowEmojiPicker(false);
+                              }}
+                              width={300}
+                              height={400}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="input-row desc-row" onClick={() => setShowDetailModal(true)} style={{ cursor: 'pointer' }}>
-                  <textarea
-                    readOnly
-                    className="desc-textarea"
-                    placeholder="상세 설명 (클릭하여 입력)"
-                    value={inputDescription}
-                    rows={1}
-                    style={{ pointerEvents: 'none' }} // Pass click to parent
-                  />
-                  <div className="action-grid">
-                    {/* Show small icons as indicators that features are inside */}
-                    <ListTodo size={18} color="var(--text-secondary)" />
+                  <div className="input-row desc-row" onClick={() => setShowDetailModal(true)} style={{ cursor: 'pointer' }}>
+                    <textarea
+                      readOnly
+                      className="desc-textarea"
+                      placeholder="상세 설명 (클릭하여 입력)"
+                      value={inputDescription}
+                      rows={1}
+                      style={{ pointerEvents: 'none' }} // Pass click to parent
+                    />
+                    <div className="action-grid">
+                      {/* Show small icons as indicators that features are inside */}
+                      <ListTodo size={18} color="var(--text-secondary)" />
+                    </div>
+                    {/* Hidden file input needs to stay in DOM but can be triggered from modal */}
+                    <input
+                      type="file"
+                      hidden
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
                   </div>
-                  {/* Hidden file input needs to stay in DOM but can be triggered from modal */}
-                  <input
-                    type="file"
-                    hidden
-                    ref={fileInputRef}
-                    accept="image/*"
-                    onChange={handleImageChange}
-                  />
                 </div>
-
-                {/* Image Preview in Main View (Optional: show valid indicator or just hide since it shows in modal) */}
-                {/* We'll hide the full preview here and show it in the modal mostly, or show a small badge? 
-                    For now, let's keep it simple: If image exists, show a badge or generic preview?
-                    Actually, let's just hide the large preview here to save space and rely on the modal/todo content.
-                */}
-              </div>
-              <button type="submit" className="premium-button add-btn" aria-label="할 일 추가">
-                <Plus size={28} strokeWidth={3} style={{ minWidth: '28px', minHeight: '28px' }} />
-              </button>
-            </form>
+                <button type="submit" className="premium-button add-btn" aria-label="할 일 추가">
+                  <Plus size={28} strokeWidth={3} style={{ minWidth: '28px', minHeight: '28px' }} />
+                </button>
+              </form>
+            )}
 
             <div className="todo-list">
               <AnimatePresence mode="popLayout">
@@ -387,6 +383,12 @@ export default function App() {
                           <Circle color="#cbd5e1" size={24} />
                         )}
                       </button>
+
+                      {activeTab === 'incomplete' && (
+                        <span className="todo-date-badge">
+                          {format(new Date(todo.createdAt), 'M.d')}
+                        </span>
+                      )}
 
                       {editingId === todo.id ? (
                         <div className="edit-container">
@@ -606,9 +608,24 @@ export default function App() {
 
         /* Todo Item Styling */
         /* Updated Todo Item Styling for Top-Right Actions */
-        .todo-item { background: rgba(255, 255, 255, 0.95); padding: 16px; padding-right: 70px; border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 6px rgba(0,0,0,0.02); position: relative; }
+        /* Updated Todo Item Styling for Top-Right Actions */
+        .todo-item { 
+          background: rgba(255, 255, 255, 0.95); 
+          padding: 16px; 
+          padding-right: 70px; 
+          border: 1px solid rgba(255,255,255,0.6); 
+          box-shadow: 0 4px 6px rgba(0,0,0,0.02); 
+          position: relative;
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+        }
         .todo-title { color: var(--text-primary); font-size: 1rem; }
         .todo-desc { color: var(--text-secondary); }
+        .todo-content { flex: 1; }
+        .todo-date-badge { font-size: 0.9rem; color: #d35400; background: #ffeaa7; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-block; margin-top: 2px; }
+        
+        .check-btn { color: #cbd5e1; transition: color 0.2s; background: transparent; border: none; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
         
         /* Edit Mode Styles */
         .edit-container { position: relative; display: flex; flex-direction: column; gap: 8px; }
@@ -625,12 +642,11 @@ export default function App() {
         .remove-saved-img { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
 
-        .check-btn { color: #cbd5e1; transition: color 0.2s; }
-        .check-btn:hover { color: var(--accent-secondary); }
+
         
-        .item-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
-        .item-actions button { color: #b2bec3; }
-        .item-actions button:hover { color: var(--accent-primary); }
+        .item-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; }
+        .item-actions button { color: #b2bec3; background: transparent; border: none; padding: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: color 0.2s; }
+        .item-actions button:hover { color: var(--accent-primary); background: transparent; }
         
         .empty-state .glass-card {
             padding: 40px;
@@ -707,6 +723,9 @@ export default function App() {
         .todo-list {
             position: relative;
             z-index: 1; /* Lower than modal */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
       `}</style>
     </div>
