@@ -6,10 +6,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Todo } from './db/todoDB';
 import { createWorker } from 'tesseract.js';
 import { CalendarView } from './components/CalendarView';
-import { isSameDay, format } from 'date-fns';
+import { isSameDay, format, isBefore, startOfToday } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
-type TabType = 'day' | 'month' | 'year';
+type TabType = 'day' | 'month' | 'year' | 'incomplete';
 
 // Add type for SpeechRecognition
 declare global {
@@ -177,7 +177,7 @@ export default function App() {
       title: inputTitle.trim(),
       description: inputDescription.trim(),
       completed: false,
-      type: activeTab,
+      type: activeTab === 'incomplete' ? 'day' : activeTab,
       image: pendingImage || undefined,
       createdAt: selectedDate.getTime() // Use selected date for creation
     });
@@ -238,12 +238,15 @@ export default function App() {
     if (activeTab === 'year') {
       return todo.type === 'year' && todoDate.getFullYear() === selectedDate.getFullYear();
     }
+    if (activeTab === 'incomplete') {
+      return !todo.completed && isBefore(todoDate, startOfToday());
+    }
     return false;
   });
 
   const stats = {
     day: allTodos.filter(t => t.type === 'day' && !t.completed && isSameDay(new Date(t.createdAt), new Date())).length,
-    month: allTodos.filter(t => t.type === 'month' && !t.completed).length,
+    incomplete: allTodos.filter(t => !t.completed && isBefore(new Date(t.createdAt), startOfToday())).length,
     year: allTodos.filter(t => t.type === 'year' && !t.completed).length,
   };
 
@@ -299,10 +302,10 @@ export default function App() {
               <span>오늘</span>
               {stats.day > 0 && <span className="badge">{stats.day}</span>}
             </button>
-            <button className={activeTab === 'month' ? 'active' : ''} onClick={() => setActiveTab('month')}>
+            <button className={activeTab === 'incomplete' ? 'active' : ''} onClick={() => setActiveTab('incomplete')}>
               <ListTodo size={18} />
-              <span>이번 달</span>
-              {stats.month > 0 && <span className="badge">{stats.month}</span>}
+              <span>미완료</span>
+              {stats.incomplete > 0 && <span className="badge">{stats.incomplete}</span>}
             </button>
             <button className={activeTab === 'year' ? 'active' : ''} onClick={() => setActiveTab('year')}>
               <Target size={18} />
@@ -318,7 +321,7 @@ export default function App() {
                   <input
                     type="text"
                     className="title-input"
-                    placeholder={activeTab === 'day' ? '할 일 제목...' : '목표 제목...'}
+                    placeholder={activeTab === 'day' ? '할 일 제목...' : activeTab === 'incomplete' ? '미완료된 할 일...' : '목표 제목...'}
                     value={inputTitle}
                     onChange={(e) => setInputTitle(e.target.value)}
                   />
