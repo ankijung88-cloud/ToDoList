@@ -219,8 +219,8 @@ export default function App() {
       return todo.type === 'month' && todoDate.getMonth() === selectedDate.getMonth() && todoDate.getFullYear() === selectedDate.getFullYear();
     }
     if (activeTab === 'year') {
-      // Show ALL tasks for the selected year
-      return todoDate.getFullYear() === selectedDate.getFullYear();
+      // Show ONLY FUTURE tasks for the selected year
+      return todoDate.getFullYear() === selectedDate.getFullYear() && isAfter(todoDate, startOfToday());
     }
     if (activeTab === 'incomplete') {
       // Show if incomplete OR if it was recently completed in this session
@@ -267,9 +267,13 @@ export default function App() {
                 <span className="date-context future">(미래 기록)</span>
               ) : (
                 <>
-                  {isBefore(selectedDate, startOfToday()) && <span className="date-context past">(과거 기록)</span>}
-                  {isAfter(selectedDate, startOfToday()) && <span className="date-context future">(미래 기록)</span>}
-                  {isSameDay(selectedDate, startOfToday()) && <span className="date-context current">(현재 기록)</span>}
+                  {isSameDay(selectedDate, startOfToday()) ? (
+                    <span className="date-context current">(현재 기록)</span>
+                  ) : isBefore(selectedDate, startOfToday()) ? (
+                    <span className="date-context past">(과거 기록)</span>
+                  ) : (
+                    <span className="date-context future">(미래 기록)</span>
+                  )}
                 </>
               )}
             </p>
@@ -422,20 +426,27 @@ export default function App() {
                       ) : (
                         <>
                           <div className="todo-header-row">
-                            <button className="check-btn" onClick={() => toggleTodo(todo.id)}>
-                              {todo.completed ? (
-                                <CheckCircle2 color="var(--accent-secondary)" size={24} />
-                              ) : (
-                                <Circle color="#cbd5e1" size={24} />
-                              )}
-                            </button>
+                            <div className="todo-header-left">
+                              <button className="check-btn" onClick={() => toggleTodo(todo.id)}>
+                                {todo.completed ? (
+                                  <CheckCircle2 color="var(--accent-secondary)" size={24} />
+                                ) : (
+                                  <Circle color="#cbd5e1" size={24} />
+                                )}
+                              </button>
 
-                            {/* Show date badge in Incomplete AND Year tab */}
-                            {(activeTab === 'incomplete' || activeTab === 'year') && (
-                              <span className="todo-date-badge">
-                                {format(new Date(todo.createdAt), 'M.d')}
-                              </span>
-                            )}
+                              {/* Show date badge in Incomplete AND Year tab */}
+                              {(activeTab === 'incomplete' || activeTab === 'year') && (
+                                <span className="todo-date-badge">
+                                  {format(new Date(todo.createdAt), 'M.d')}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="item-actions">
+                              <button className="edit-btn" onClick={() => startEdit(todo)}><Edit2 size={18} /></button>
+                              <button className="delete-btn" onClick={() => deleteTodo(todo.id)}><Trash2 size={18} /></button>
+                            </div>
                           </div>
 
                           <div className="todo-content">
@@ -452,10 +463,7 @@ export default function App() {
                               </div>
                             )}
                           </div>
-                          <div className="item-actions">
-                            <button className="edit-btn" onClick={() => startEdit(todo)}><Edit2 size={18} /></button>
-                            <button className="delete-btn" onClick={() => deleteTodo(todo.id)}><Trash2 size={18} /></button>
-                          </div>
+
                         </>
                       )}
                     </motion.div>
