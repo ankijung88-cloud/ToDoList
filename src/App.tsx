@@ -418,16 +418,16 @@ export default function App() {
                             onChange={(e) => setEditTitle(e.target.value)}
                             autoFocus
                           />
+                          <div className="edit-actions">
+                            <button className="save-btn" onClick={() => saveEdit(todo.id)}><Check size={20} /></button>
+                            <button className="cancel-btn" onClick={() => cancelEdit()}><X size={20} /></button>
+                          </div>
                           <input
                             type="text"
                             className="edit-desc"
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
                           />
-                          <div className="edit-actions">
-                            <button className="save-btn" onClick={() => saveEdit(todo.id)}><Check size={20} /></button>
-                            <button className="cancel-btn" onClick={() => cancelEdit()}><X size={20} /></button>
-                          </div>
                         </div>
                       ) : (
                         <>
@@ -442,10 +442,6 @@ export default function App() {
                                     <X size={12} />
                                   </button>
                                 </div>
-                                <button className="ocr-mini-btn glass-card" onClick={() => todo.image && handleOcr(todo.image, 'todo', todo.id)}>
-                                  <FileText size={12} />
-                                  <span>글자 추출</span>
-                                </button>
                               </div>
                             )}
                           </div>
@@ -503,8 +499,21 @@ export default function App() {
               {imagePreview && (
                 <div className="modal-image-preview">
                   <img src={imagePreview} alt="Preview" />
-                  <button onClick={() => { setPendingImage(null); setImagePreview(null); }}>
+                  <button onClick={() => { setPendingImage(null); setImagePreview(null); }} className="remove-img-btn">
                     <X size={16} />
+                  </button>
+                  <button
+                    className="scan-text-btn glass-card"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (pendingImage) {
+                        const text = await recognizeText(pendingImage);
+                        if (text) setInputDescription(prev => prev ? prev + '\n' + text : text);
+                      }
+                    }}
+                  >
+                    <FileText size={14} />
+                    <span>텍스트 추출</span>
                   </button>
                 </div>
               )}
@@ -636,13 +645,30 @@ export default function App() {
         .add-btn { width: 50px; height: 50px; flex-shrink: 0; margin-top: 4px; }
 
         /* Todo Item Styling */
-        .todo-item { background: rgba(255, 255, 255, 0.95); padding: 16px; border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        /* Updated Todo Item Styling for Top-Right Actions */
+        .todo-item { background: rgba(255, 255, 255, 0.95); padding: 16px; padding-right: 70px; border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 6px rgba(0,0,0,0.02); position: relative; }
         .todo-title { color: var(--text-primary); font-size: 1rem; }
         .todo-desc { color: var(--text-secondary); }
         
+        /* Edit Mode Styles */
+        .edit-container { position: relative; display: flex; flex-direction: column; gap: 8px; }
+        .edit-actions { position: absolute; top: -10px; right: -60px; display: flex; gap: 4px; }
+        .save-btn, .cancel-btn { width: 32px; height: 32px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+        .save-btn { background: var(--accent-secondary); color: white; }
+        .cancel-btn { background: #f1f3f5; color: var(--text-secondary); }
+        .edit-title { font-size: 1rem; font-weight: 700; padding: 8px; border: 1px solid var(--glass-border); border-radius: 8px; background: rgba(255,255,255,0.5); width: 100%; }
+        .edit-desc { font-size: 0.9rem; padding: 8px; border: 1px solid var(--glass-border); border-radius: 8px; background: rgba(255,255,255,0.5); width: 100%; }
+
+        .todo-multimedia { margin-top: 12px; }
+        .todo-image-container { position: relative; border-radius: 12px; overflow: hidden; max-width: 100%; display: inline-block; }
+        .todo-image { max-width: 100%; height: auto; display: block; object-fit: contain; max-height: 400px; }
+        .remove-saved-img { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .ocr-mini-btn { margin-top: 8px; padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; color: var(--text-secondary); border: none; cursor: pointer; }
+
         .check-btn { color: #cbd5e1; transition: color 0.2s; }
         .check-btn:hover { color: var(--accent-secondary); }
         
+        .item-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
         .item-actions button { color: #b2bec3; }
         .item-actions button:hover { color: var(--accent-primary); }
         
@@ -701,14 +727,25 @@ export default function App() {
         .confirm-btn { padding: 8px 32px; font-size: 1rem; }
         
         .modal-image-preview {
-            position: relative; width: 100%; height: 150px; border-radius: 12px; overflow: hidden;
+            position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden;
             border: 1px solid rgba(0,0,0,0.05); margin-bottom: 8px;
+            background: #f8f9fa;
         }
-        .modal-image-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .modal-image-preview button {
-            position: absolute; top: 8px; right: 8px;
-            width: 28px; height: 28px; background: rgba(0,0,0,0.5);
+        .modal-image-preview img { width: 100%; height: 100%; object-fit: contain; }
+        .remove-img-btn {
+            position: absolute; top: 10px; right: 10px;
+            width: 32px; height: 32px; background: rgba(0,0,0,0.6);
             border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+            z-index: 10;
+        }
+        .scan-text-btn {
+            position: absolute; bottom: 10px; right: 10px;
+            padding: 8px 16px; background: rgba(255,255,255,0.9);
+            border-radius: 20px; color: var(--accent-primary);
+            font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px;
+            border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 10;
         }
         
         .todo-list {
