@@ -646,27 +646,48 @@ export default function App() {
         /* Todo Item Styling */
         /* Updated Todo Item Styling for Top-Right Actions */
         /* Updated Todo Item Styling for Top-Right Actions */
+        /* Updated Todo Item Styling for Top-Right Actions */
         .todo-item { 
           background: rgba(255, 255, 255, 0.95); 
           padding: 16px; 
-          padding-right: 70px; 
           border: 1px solid rgba(255,255,255,0.6); 
           box-shadow: 0 4px 6px rgba(0,0,0,0.02); 
           position: relative;
           display: flex;
-          align-items: flex-start;
+          flex-direction: column; /* Stack header and content */
           gap: 12px;
         }
-        .todo-title { color: var(--text-primary); font-size: 1rem; }
-        .todo-desc { color: var(--text-secondary); }
-        .todo-content { flex: 1; }
-        .todo-date-badge { font-size: 0.9rem; color: #d35400; background: #ffeaa7; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-block; margin-top: 2px; }
+
+        .todo-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
         
-        .check-btn { color: #cbd5e1; transition: color 0.2s; background: transparent; border: none; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
+        .todo-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .todo-content { 
+            width: 100%; 
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .todo-title { color: var(--text-primary); font-size: 1rem; font-weight: 700; width: 100%; line-height: 1.4; }
+        .todo-desc { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; word-break: break-word; white-space: pre-wrap; width: 100%; }
+
+        .todo-date-badge { font-size: 0.9rem; color: #d35400; background: #ffeaa7; padding: 2px 6px; border-radius: 6px; font-weight: 700; display: inline-flex;  }
+        
+        .check-btn { color: #cbd5e1; transition: color 0.2s; background: transparent; border: none; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
         
         /* Edit Mode Styles */
         .edit-container { position: relative; display: flex; flex-direction: column; gap: 8px; }
-        .edit-actions { position: absolute; top: -10px; right: -60px; display: flex; gap: 4px; }
+        .edit-actions { display: flex; gap: 4px; justify-content: flex-end; }
         .save-btn, .cancel-btn { width: 32px; height: 32px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
         .save-btn { background: var(--accent-secondary); color: white; }
         .cancel-btn { background: #f1f3f5; color: var(--text-secondary); }
