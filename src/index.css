@@ -1,16 +1,19 @@
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.1);
-  --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-blur: blur(12px);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-  
-  --accent-primary: #8b5cf6; /* Violet */
-  --accent-secondary: #3b82f6; /* Blue */
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  
-  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
-  
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-blur: blur(20px);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+
+  --accent-primary: #FF6B6B;
+  /* Vibrant Coral */
+  --accent-secondary: #4ECDC4;
+  /* Vibrant Turquoise */
+  --text-primary: #2d3436;
+  --text-secondary: #636e72;
+
+  --bg-gradient: linear-gradient(135deg, #fce38a 0%, #f38181 100%);
+  /* Bright sunny gradient */
+
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -34,7 +37,7 @@ body {
 
 #root {
   width: 100%;
-  max-width: 480px; /* Mobile focused */
+  /* Removed max-width to fit all screen sizes */
   min-height: 100vh;
   position: relative;
 }
