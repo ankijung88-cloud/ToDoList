@@ -261,8 +261,17 @@ export default function App() {
             <h1>My Goals</h1>
             <p className="current-date-display">
               {format(selectedDate, 'PPP EEEE', { locale: ko })}
-              {isBefore(selectedDate, startOfToday()) && <span className="date-context past">(과거 기록)</span>}
-              {isAfter(selectedDate, startOfToday()) && <span className="date-context future">(미래 기록)</span>}
+              {format(selectedDate, 'PPP EEEE', { locale: ko })}
+              {activeTab === 'incomplete' ? (
+                <span className="date-context past">(과거 기록)</span>
+              ) : activeTab === 'year' ? (
+                <span className="date-context future">(미래 기록)</span>
+              ) : (
+                <>
+                  {isBefore(selectedDate, startOfToday()) && <span className="date-context past">(과거 기록)</span>}
+                  {isAfter(selectedDate, startOfToday()) && <span className="date-context future">(미래 기록)</span>}
+                </>
+              )}
             </p>
           </div>
           <button
@@ -413,19 +422,36 @@ export default function App() {
                             onChange={(e) => setEditTitle(e.target.value)}
                             autoFocus
                           />
-                          <div className="edit-actions">
-                            <button className="save-btn" onClick={() => saveEdit(todo.id)}><Check size={20} /></button>
-                            <button className="cancel-btn" onClick={() => cancelEdit()}><X size={20} /></button>
-                          </div>
                           <input
                             type="text"
                             className="edit-desc"
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
                           />
+                          <div className="edit-actions">
+                            <button className="save-btn" onClick={() => saveEdit(todo.id)}><Check size={20} /></button>
+                            <button className="cancel-btn" onClick={() => cancelEdit()}><X size={20} /></button>
+                          </div>
                         </div>
                       ) : (
                         <>
+                          <div className="todo-header-row">
+                            <button className="check-btn" onClick={() => toggleTodo(todo.id)}>
+                              {todo.completed ? (
+                                <CheckCircle2 color="var(--accent-secondary)" size={24} />
+                              ) : (
+                                <Circle color="#cbd5e1" size={24} />
+                              )}
+                            </button>
+
+                            {/* Show date badge in Incomplete AND Year tab */}
+                            {(activeTab === 'incomplete' || activeTab === 'year') && (
+                              <span className="todo-date-badge">
+                                {format(new Date(todo.createdAt), 'M.d')}
+                              </span>
+                            )}
+                          </div>
+
                           <div className="todo-content">
                             <span className="todo-title">{todo.title}</span>
                             {todo.description && <span className="todo-desc">{todo.description}</span>}
