@@ -6,7 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Todo } from './db/todoDB';
 import { createWorker } from 'tesseract.js';
 import { CalendarView } from './components/CalendarView';
-import { isSameDay, format, isBefore, startOfToday } from 'date-fns';
+import { isSameDay, format, isBefore, isAfter, startOfToday } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 type TabType = 'day' | 'month' | 'year' | 'incomplete';
@@ -26,6 +26,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<number[]>([]);
 
   // Calendar & View State
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -171,6 +172,9 @@ export default function App() {
     if (!id) return;
     const todo = await db.todos.get(id);
     if (todo) {
+      if (activeTab === 'incomplete' && !todo.completed) {
+        setRecentlyCompletedIds(prev => [...prev, id]);
+      }
       await db.todos.update(id, { completed: !todo.completed });
     }
   };
@@ -215,12 +219,20 @@ export default function App() {
       return todo.type === 'month' && todoDate.getMonth() === selectedDate.getMonth() && todoDate.getFullYear() === selectedDate.getFullYear();
     }
     if (activeTab === 'year') {
-      return todo.type === 'year' && todoDate.getFullYear() === selectedDate.getFullYear();
+      // Show ALL tasks for the selected year
+      return todoDate.getFullYear() === selectedDate.getFullYear();
     }
     if (activeTab === 'incomplete') {
-      return !todo.completed && isBefore(todoDate, startOfToday());
+      // Show if incomplete OR if it was recently completed in this session
+      return (!todo.completed || recentlyCompletedIds.includes(todo.id!)) && isBefore(todoDate, startOfToday());
     }
     return false;
+  }).sort((a, b) => {
+    // Sort logic: Year tab wants Ascending (Oldest first), others keep Default (Newest first via allTodos)
+    if (activeTab === 'year') {
+      return a.createdAt - b.createdAt;
+    }
+    return 0; // Keep existing order (descending from useLiveQuery)
   });
 
   const stats = {
@@ -249,7 +261,8 @@ export default function App() {
             <h1>My Goals</h1>
             <p className="current-date-display">
               {format(selectedDate, 'PPP EEEE', { locale: ko })}
-              {!isSameDay(selectedDate, new Date()) && <span className="date-context">(과거 기록)</span>}
+              {isBefore(selectedDate, startOfToday()) && <span className="date-context past">(과거 기록)</span>}
+              {isAfter(selectedDate, startOfToday()) && <span className="date-context future">(미래 기록)</span>}
             </p>
           </div>
           <button
@@ -294,7 +307,7 @@ export default function App() {
           </nav>
 
           <main>
-            {activeTab !== 'incomplete' && (
+            {(activeTab !== 'incomplete' && activeTab !== 'year') && (
               <form onSubmit={addTodo} className="input-group glass-card">
                 <div className="input-fields">
                   <div className="input-row">
@@ -384,7 +397,8 @@ export default function App() {
                         )}
                       </button>
 
-                      {activeTab === 'incomplete' && (
+                      {/* Show date badge in Incomplete AND Year tab */}
+                      {(activeTab === 'incomplete' || activeTab === 'year') && (
                         <span className="todo-date-badge">
                           {format(new Date(todo.createdAt), 'M.d')}
                         </span>
@@ -551,7 +565,9 @@ export default function App() {
         .header-content { display: flex; align-items: center; justify-content: space-between; }
         header h1 { font-size: 28px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
         .current-date-display { font-size: 14px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; }
-        .date-context { font-size: 11px; padding: 2px 6px; background: #ffeaa7; color: #d35400; border-radius: 4px; font-weight: 700; }
+        .date-context { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+        .date-context.past { background: #ffeaa7; color: #d35400; }
+        .date-context.future { background: #74c0fc; color: #1864ab; }
 
         .view-toggle-btn { background: white; border: none; padding: 10px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: var(--text-primary); cursor: pointer; transition: all 0.2s; }
         .view-toggle-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
