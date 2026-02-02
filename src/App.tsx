@@ -45,7 +45,7 @@ export default function App() {
   // OCR State
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
-  const [ocrResult, setOcrResult] = useState<{ text: string; target: 'input' | 'todo'; todoId?: number } | null>(null);
+
 
   // Emoji State
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -142,28 +142,7 @@ export default function App() {
     }
   };
 
-  const handleOcr = async (imageSource: Blob | string, target: 'input' | 'todo', todoId?: number) => {
-    const text = await recognizeText(imageSource);
-    if (!text) return;
-    setOcrResult({ text, target, todoId });
-  };
 
-  const confirmOcr = async () => {
-    if (!ocrResult) return;
-    const { text, target, todoId } = ocrResult;
-
-    if (target === 'input') {
-      setInputDescription(prev => (prev ? prev + '\n' + text : text));
-    } else if (target === 'todo' && todoId) {
-      const todo = await db.todos.get(todoId);
-      if (todo) {
-        await db.todos.update(todoId, {
-          description: todo.description ? todo.description + '\n' + text : text
-        });
-      }
-    }
-    setOcrResult(null);
-  };
 
   const removeTodoImage = async (id?: number) => {
     if (id) await db.todos.update(id, { image: undefined });
@@ -555,26 +534,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* OCR Result Modal (Existing) */}
-      {ocrResult && (
-        <div className="ocr-modal-overlay">
-          <div className="ocr-modal-content glass-card">
-            <h3>스캔 결과 확인 및 수정</h3>
-            <textarea
-              className="ocr-textarea"
-              value={ocrResult.text}
-              onChange={(e) => setOcrResult({ ...ocrResult, text: e.target.value })}
-            />
-            <div className="ocr-modal-actions">
-              <button className="ocr-cancel-btn glass-card" onClick={() => setOcrResult(null)}>
-                취소
-              </button>
-              <button className="ocr-confirm-btn premium-button" onClick={confirmOcr}>
-                저장하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       <style>{`
         .app-container { padding: 20px; position: relative; z-index: 1; max-width: 800px; margin: 0 auto; width: 100%; transition: max-width 0.3s; }
@@ -663,7 +623,7 @@ export default function App() {
         .todo-image-container { position: relative; border-radius: 12px; overflow: hidden; max-width: 100%; display: inline-block; }
         .todo-image { max-width: 100%; height: auto; display: block; object-fit: contain; max-height: 400px; }
         .remove-saved-img { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .ocr-mini-btn { margin-top: 8px; padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; color: var(--text-secondary); border: none; cursor: pointer; }
+
 
         .check-btn { color: #cbd5e1; transition: color 0.2s; }
         .check-btn:hover { color: var(--accent-secondary); }
@@ -683,12 +643,8 @@ export default function App() {
         }
 
         /* Overlays */
-        .ocr-loader-overlay, .ocr-modal-overlay { background: rgba(0,0,0,0.2); backdrop-filter: blur(8px); }
-        .ocr-loader-content, .ocr-modal-content { background: white; color: var(--text-primary); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-        .ocr-textarea { background: #f8f9fa; border: 1px solid #e9ecef; color: var(--text-primary); }
-        .ocr-textarea:focus { border-color: var(--accent-secondary); }
-        .ocr-modal-content h3 { color: var(--text-primary); }
-        .ocr-cancel-btn { background: #f1f3f5; color: var(--text-secondary); border: none; }
+        .ocr-loader-overlay { background: rgba(0,0,0,0.2); backdrop-filter: blur(8px); }
+        .ocr-loader-content { background: white; color: var(--text-primary); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
         
         /* Responsive Fixes */
         .app-container {
