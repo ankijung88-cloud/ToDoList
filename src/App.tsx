@@ -41,8 +41,9 @@ export default function App() {
   const recognitionRef = useRef<any>(null);
 
   // Image State
-  const [pendingImage, setPendingImage] = useState<Blob | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // Image State
+  const [pendingImages, setPendingImages] = useState<Blob[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // OCR State
@@ -111,14 +112,19 @@ export default function App() {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPendingImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newImages = Array.from(files);
+      setPendingImages(prev => [...prev, ...newImages]);
+
+      // Generate previews
+      newImages.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
@@ -158,14 +164,14 @@ export default function App() {
       description: inputDescription.trim(),
       completed: false,
       type: activeTab === 'incomplete' ? 'day' : activeTab,
-      images: pendingImage ? [pendingImage] : undefined,
+      images: pendingImages.length > 0 ? pendingImages : undefined,
       createdAt: selectedDate.getTime() // Use selected date for creation
     });
 
     setInputTitle('');
     setInputDescription('');
-    setPendingImage(null);
-    setImagePreview(null);
+    setPendingImages([]);
+    setImagePreviews([]);
   };
 
   const toggleTodo = async (id?: number) => {
@@ -380,6 +386,7 @@ export default function App() {
                       hidden
                       ref={fileInputRef}
                       accept="image/*"
+                      multiple
                       onChange={handleImageChange}
                     />
                   </div>
@@ -586,25 +593,35 @@ export default function App() {
                 autoFocus
               />
 
-              {imagePreview && (
-                <div className="modal-image-preview">
-                  <img src={imagePreview} alt="Preview" />
-                  <button onClick={() => { setPendingImage(null); setImagePreview(null); }} className="remove-img-btn">
-                    <X size={16} />
-                  </button>
-                  <button
-                    className="scan-text-btn glass-card"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (pendingImage) {
-                        const text = await recognizeText(pendingImage);
-                        if (text) setInputDescription(prev => prev ? prev + '\n' + text : text);
-                      }
-                    }}
-                  >
-                    <FileText size={14} />
-                    <span>텍스트 추출</span>
-                  </button>
+              {imagePreviews.length > 0 && (
+                <div className="modal-images-scroll-container">
+                  {imagePreviews.map((preview, idx) => (
+                    <div key={idx} className="modal-image-preview">
+                      <img src={preview} alt={`Preview ${idx}`} />
+                      <button onClick={() => {
+                        setPendingImages(prev => prev.filter((_, i) => i !== idx));
+                        setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+                      }} className="remove-img-btn">
+                        <X size={16} />
+                      </button>
+                      {/* Only show OCR extraction on the first image for now or add granular control later */}
+                      {idx === 0 && (
+                        <button
+                          className="scan-text-btn glass-card"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (pendingImages[0]) {
+                              const text = await recognizeText(pendingImages[0]);
+                              if (text) setInputDescription(prev => prev ? prev + '\n' + text : text);
+                            }
+                          }}
+                        >
+                          <FileText size={14} />
+                          <span>텍스트 추출 (1번)</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -636,7 +653,7 @@ export default function App() {
                   </div>
                 </div>
                 <button className="premium-button confirm-btn" onClick={() => setShowDetailModal(false)}>
-                  완료
+                  완료 ({pendingImages.length}장)
                 </button>
               </div>
             </motion.div>
@@ -811,9 +828,30 @@ export default function App() {
         .remove-edit-img { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
         
         /* View Images Grid */
-        .images-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-        .images-grid .todo-image-container { max-width: 200px; max-height: 200px; border-radius: 12px; overflow: hidden; }
-        .images-grid .todo-image { width: 100%; height: 100%; object-fit: cover; }
+        /* View Images - Horizontal Slide Scroll */
+        .images-grid { 
+            display: flex; 
+            gap: 12px; 
+            overflow-x: auto; 
+            padding-bottom: 8px; /* For scrollbar space */
+            flex-wrap: nowrap; /* Prevent wrapping */
+            -webkit-overflow-scrolling: touch; /* Smooth scroll on mobile */
+        }
+        .images-grid::-webkit-scrollbar { height: 6px; }
+        .images-grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .images-grid .todo-image-container { 
+            flex: 0 0 auto; /* Don't shrink */
+            width: 150px; 
+            height: 150px; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .images-grid .todo-image { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+        }
         
         .empty-state .glass-card {
             padding: 40px;
@@ -865,15 +903,30 @@ export default function App() {
         
         .confirm-btn { padding: 8px 32px; font-size: 1rem; }
         
+        .modal-images-scroll-container {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            flex-wrap: nowrap;
+        }
+        .modal-images-scroll-container::-webkit-scrollbar { height: 6px; }
+        .modal-images-scroll-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+
         .modal-image-preview {
-            position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden;
-            border: 1px solid rgba(0,0,0,0.05); margin-bottom: 8px;
+            position: relative; 
+            flex: 0 0 200px; /* Fixed width for previews */
+            height: 200px; 
+            border-radius: 12px; 
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.05); 
             background: #f8f9fa;
         }
-        .modal-image-preview img { width: 100%; height: 100%; object-fit: contain; }
+        .modal-image-preview img { width: 100%; height: 100%; object-fit: cover; }
         .remove-img-btn {
-            position: absolute; top: 10px; right: 10px;
-            width: 32px; height: 32px; background: rgba(0,0,0,0.6);
+            position: absolute; top: 8px; right: 8px;
+            width: 28px; height: 28px; background: rgba(0,0,0,0.6);
             border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;
             z-index: 10;
         }
