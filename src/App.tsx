@@ -44,6 +44,7 @@ export default function App() {
   // Image State
   const [pendingImages, setPendingImages] = useState<Blob[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // OCR State
@@ -536,7 +537,7 @@ export default function App() {
                                 <div className="todo-multimedia">
                                   <div className="images-grid">
                                     {imagesToShow.map((img, idx) => (
-                                      <div key={idx} className="todo-image-container">
+                                      <div key={idx} className="todo-image-container" onClick={() => setFullscreenImage(URL.createObjectURL(img))} style={{ cursor: 'pointer' }}>
                                         <img src={URL.createObjectURL(img)} alt={`Task attachment ${idx}`} className="todo-image" />
                                       </div>
                                     ))}
@@ -657,6 +658,26 @@ export default function App() {
                 </button>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Image Viewer */}
+      <AnimatePresence>
+        {fullscreenImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fullscreen-image-overlay"
+            onClick={() => setFullscreenImage(null)}
+          >
+            <div className="fullscreen-image-wrapper">
+              <img src={fullscreenImage} alt="Full View" />
+              <button className="close-fullscreen-btn" onClick={() => setFullscreenImage(null)}>
+                <X size={32} />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -947,6 +968,33 @@ export default function App() {
             flex-direction: column;
             gap: 20px;
         }
+          
+        /* Fullscreen Viewer Styles */
+        .fullscreen-image-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .fullscreen-image-wrapper { position: relative; max-width: 100%; max-height: 100%; display: flex; justify-content: center; align-items: center; }
+        .fullscreen-image-wrapper img { max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .close-fullscreen-btn {
+            position: absolute; top: -40px; right: -40px;
+            background: rgba(255,255,255,0.2); color: white;
+            border: none; border-radius: 50%; width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .close-fullscreen-btn:hover { background: rgba(255,255,255,0.4); }
+        @media (max-width: 768px) {
+            .close-fullscreen-btn { top: -40px; right: 0; } /* Adjust for mobile */
+        }
+
+        @media (max-width: 768px) {
+            .close-fullscreen-btn { top: -40px; right: 0; } /* Adjust for mobile */
+        }
+
       `}</style>
     </div>
   );
