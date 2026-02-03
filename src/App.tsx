@@ -1001,11 +1001,14 @@ export default function App() {
         }
         .close-fullscreen-btn:hover { background: rgba(255,255,255,0.4); }
         @media (max-width: 768px) {
-            .close-fullscreen-btn { top: -40px; right: 0; } /* Adjust for mobile */
-        }
-
-        @media (max-width: 768px) {
-            .close-fullscreen-btn { top: -40px; right: 0; } /* Adjust for mobile */
+            .close-fullscreen-btn { 
+                position: fixed;
+                top: auto; 
+                bottom: 30px; 
+                right: 30px;
+                background: rgba(0,0,0,0.5);
+                width: 48px; height: 48px;
+            }
         }
 
       `}</style>
