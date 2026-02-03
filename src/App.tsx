@@ -537,7 +537,14 @@ export default function App() {
                                 <div className="todo-multimedia">
                                   <div className="images-grid">
                                     {imagesToShow.map((img, idx) => (
-                                      <div key={idx} className="todo-image-container" onClick={() => setFullscreenImage(URL.createObjectURL(img))} style={{ cursor: 'pointer' }}>
+                                      <div
+                                        key={idx}
+                                        className="todo-image-container"
+                                        onClick={() => setFullscreenImage(URL.createObjectURL(img))}
+                                        style={{ cursor: 'pointer' }}
+                                        role="button"
+                                        tabIndex={0}
+                                      >
                                         <img src={URL.createObjectURL(img)} alt={`Task attachment ${idx}`} className="todo-image" />
                                       </div>
                                     ))}
@@ -867,6 +874,12 @@ export default function App() {
             border-radius: 12px; 
             overflow: hidden; 
             border: 1px solid rgba(0,0,0,0.05);
+            transition: transform 0.1s, opacity 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .images-grid .todo-image-container:active {
+            transform: scale(0.98);
+            opacity: 0.8;
         }
         .images-grid .todo-image { 
             width: 100%; 
