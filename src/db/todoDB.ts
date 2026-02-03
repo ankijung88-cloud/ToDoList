@@ -6,7 +6,8 @@ export interface Todo {
     description: string;
     completed: boolean;
     type: 'day' | 'month' | 'year';
-    image?: Blob; // Storing images as Blobs for efficiency
+    image?: Blob; // Legacy: Keep for backward compatibility
+    images?: Blob[]; // New: support multiple images
     createdAt: number;
 }
 

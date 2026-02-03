@@ -26,6 +26,8 @@ export default function App() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editImages, setEditImages] = useState<Blob[]>([]);
+  const [showEditEmoji, setShowEditEmoji] = useState(false);
   const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<number[]>([]);
 
   // Calendar & View State
@@ -145,9 +147,7 @@ export default function App() {
 
 
 
-  const removeTodoImage = async (id?: number) => {
-    if (id) await db.todos.update(id, { image: undefined });
-  };
+
 
   const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,7 +158,7 @@ export default function App() {
       description: inputDescription.trim(),
       completed: false,
       type: activeTab === 'incomplete' ? 'day' : activeTab,
-      image: pendingImage || undefined,
+      images: pendingImage ? [pendingImage] : undefined,
       createdAt: selectedDate.getTime() // Use selected date for creation
     });
 
@@ -187,6 +187,9 @@ export default function App() {
     setEditingId(todo.id!);
     setEditTitle(todo.title);
     setEditDescription(todo.description);
+    // Load images: prefer 'images' array, fallback to single 'image' if exists
+    const loadedImages = todo.images || (todo.image ? [todo.image] : []);
+    setEditImages(loadedImages);
   };
 
   const cancelEdit = () => {
@@ -199,11 +202,14 @@ export default function App() {
     if (!id || !editTitle.trim()) return;
     await db.todos.update(id, {
       title: editTitle.trim(),
-      description: editDescription.trim()
+      description: editDescription.trim(),
+      images: editImages
     });
     setEditingId(null);
     setEditTitle('');
     setEditDescription('');
+    setEditImages([]);
+    setShowEditEmoji(false);
   };
 
   // Filter Logic
@@ -411,16 +417,79 @@ export default function App() {
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
                             autoFocus
+                            placeholder="할 일 제목"
                           />
-                          <input
-                            type="text"
+
+                          <div className="edit-separator"></div>
+
+                          <textarea
                             className="edit-desc"
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
+                            placeholder="상세 내용을 입력하세요"
+                            rows={3}
                           />
+
+                          {/* New Styled Toolbar */}
+                          <div className="edit-tools-bar">
+                            <label className="edit-tool-btn">
+                              <Camera size={20} />
+                              <input
+                                type="file"
+                                hidden
+                                accept="image/*"
+                                multiple
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files.length > 0) {
+                                    const newFiles = Array.from(e.target.files);
+                                    setEditImages(prev => [...prev, ...newFiles]);
+                                  }
+                                }}
+                              />
+                            </label>
+
+                            <div style={{ position: 'relative' }}>
+                              <button className="edit-tool-btn" onClick={() => setShowEditEmoji(!showEditEmoji)}>
+                                <Smile size={20} color={showEditEmoji ? 'var(--accent-primary)' : '#64748b'} />
+                              </button>
+                              {showEditEmoji && (
+                                <div style={{ position: 'absolute', top: '45px', left: 0, zIndex: 50 }}>
+                                  <EmojiPicker
+                                    onEmojiClick={(emojiObject: any) => {
+                                      setEditDescription(prev => prev + emojiObject.emoji); // Add to description
+                                      setShowEditEmoji(false);
+                                    }}
+                                    width={300}
+                                    height={400}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Edit Mode Images List */}
+                          {editImages.length > 0 && (
+                            <div className="edit-images-section">
+                              <div className="images-list">
+                                {editImages.map((img, idx) => (
+                                  <div key={idx} className="edit-image-thumbnail">
+                                    <img src={URL.createObjectURL(img)} alt="thumbnail" />
+                                    <button className="remove-edit-img" onClick={() => setEditImages(prev => prev.filter((_, i) => i !== idx))}>
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           <div className="edit-actions">
                             <button className="save-btn" onClick={() => saveEdit(todo.id)}><Check size={20} /></button>
-                            <button className="cancel-btn" onClick={() => cancelEdit()}><X size={20} /></button>
+                            <button className="cancel-btn" onClick={() => {
+                              cancelEdit();
+                              setShowEditEmoji(false);
+                              setEditImages([]);
+                            }}><X size={20} /></button>
                           </div>
                         </div>
                       ) : (
@@ -452,16 +521,22 @@ export default function App() {
                           <div className="todo-content">
                             <span className="todo-title">{todo.title}</span>
                             {todo.description && <span className="todo-desc">{todo.description}</span>}
-                            {todo.image && (
-                              <div className="todo-multimedia">
-                                <div className="todo-image-container">
-                                  <img src={URL.createObjectURL(todo.image)} alt="Task" className="todo-image" />
-                                  <button className="remove-saved-img" onClick={() => removeTodoImage(todo.id)}>
-                                    <X size={12} />
-                                  </button>
+                            {/* Display Images (Legacy + New) */}
+                            {(() => {
+                              const imagesToShow = todo.images && todo.images.length > 0 ? todo.images : (todo.image ? [todo.image] : []);
+                              if (imagesToShow.length === 0) return null;
+                              return (
+                                <div className="todo-multimedia">
+                                  <div className="images-grid">
+                                    {imagesToShow.map((img, idx) => (
+                                      <div key={idx} className="todo-image-container">
+                                        <img src={URL.createObjectURL(img)} alt={`Task attachment ${idx}`} className="todo-image" />
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                           </div>
 
                         </>
@@ -705,6 +780,40 @@ export default function App() {
         .item-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; }
         .item-actions button { color: #b2bec3; background: transparent; border: none; padding: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: color 0.2s; }
         .item-actions button:hover { color: var(--accent-primary); background: transparent; }
+
+        /* Edit Styles Enhancements */
+        .edit-title { font-size: 1rem; font-weight: 700; padding: 8px; border: none; background: transparent; width: 100%; outline: none; }
+        .edit-title:focus { background: rgba(0,0,0,0.02); border-radius: 8px; }
+        .edit-desc { font-size: 0.9rem; padding: 8px; border: none; background: transparent; width: 100%; resize: none; font-family: inherit; outline: none; }
+        .edit-desc:focus { background: rgba(0,0,0,0.02); border-radius: 8px; }
+
+        .edit-separator { height: 1px; background: #e2e8f0; margin: 4px 8px; width: calc(100% - 16px); }
+
+        /* Styled Toolbar Buttons (The User's Image Style) */
+        .edit-tools-bar { display: flex; gap: 10px; padding: 0 8px; margin-top: 8px; }
+        .edit-tool-btn { 
+            width: 42px; height: 42px; 
+            border: 2px solid #cbd5e1; /* Slate-300 */
+            border-radius: 12px; 
+            background: white; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; 
+            color: #64748b; /* Slate-500 */
+            transition: all 0.2s;
+        }
+        .edit-tool-btn:hover { border-color: var(--accent-primary); color: var(--accent-primary); background: #f8f9fa; transform: translateY(-1px); }
+        
+        /* Thumbnails */
+        .edit-images-section { margin: 12px 0 4px 0; padding: 0 8px; }
+        .images-list { display: flex; gap: 8px; flex-wrap: wrap; }
+        .edit-image-thumbnail { position: relative; width: 60px; height: 60px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .edit-image-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+        .remove-edit-img { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+        
+        /* View Images Grid */
+        .images-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .images-grid .todo-image-container { max-width: 200px; max-height: 200px; border-radius: 12px; overflow: hidden; }
+        .images-grid .todo-image { width: 100%; height: 100%; object-fit: cover; }
         
         .empty-state .glass-card {
             padding: 40px;
