@@ -1,73 +1,116 @@
-# React + TypeScript + Vite
+# Glassmorphism ToDo List PWA
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+아름다운 글래스모피즘(Glassmorphism) 디자인이 적용된 현대적인 할 일 관리(ToDo List) 애플리케이션입니다. React와 Vite로 구축되었으며, 모바일 환경에 최적화된 PWA(Progressive Web App) 기능을 지원합니다.
 
-Currently, two official plugins are available:
+![Glassmorphism UI](https://source.unsplash.com/random/800x600/?abstract,glass) *<!-- 스크린샷 자리가 있다면 교체 권장 -->*
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ 주요 기능 (Key Features)
 
-## React Compiler
+### 1. 강력한 할 일 관리
+- **오늘의 할 일**: 하루에 집중할 수 있는 데일리 리스트.
+- **미완료 태스크 관리**: 과거에 완료하지 못한 일을 별도 탭에서 모아보고 관리.
+- **연간 목표**: 장기적인 목표를 설정하고 추적.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 2. 풍부한 입력 방식 (Rich Input)
+- **음성 인식 (Voice Dictation)**: 타자 칠 필요 없이 목소리로 할 일과 상세 내용을 입력.
+- **이미지 첨부**: 할 일에 관련된 사진을 여러 장 첨부.
+- **OCR 텍스트 추출**: 이미지 속 글자를 자동으로 인식하여 상세 설명에 추가 (Tesseract.js).
+- **이모지 피커**: 직관적인 이모티콘으로 태스크를 꾸미기.
 
-## Expanding the ESLint configuration
+### 3. 시각적 경험
+- **글래스모피즘 UI**: 투명하고 세련된 배경 블러 효과와 부드러운 애니메이션 (Framer Motion).
+- **캘린더 뷰**: 월별/일별 기록을 달력 형태로 직관적으로 확인.
+- **반응형 디자인**: 데스크톱과 모바일 모두에서 완벽하게 동작.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 4. 데이터 저장 (Privacy First)
+- **로컬 스토리지**: 모든 데이터는 브라우저 내부의 IndexedDB(Dexie.js)에 저장됩니다.
+- **오프라인 지원**: 인터넷 연결 없이도 언제든지 사용 가능.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 📱 모바일 설치 및 사용법 (Mobile PWA)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+이 앱은 **PWA (Progressive Web App)** 기술이 적용되어 있어, 앱스토어 다운로드 없이 홈 화면에 설치하여 네이티브 앱처럼 사용할 수 있습니다.
+
+### 안드로이드 (Chrome)
+1. 모바일 Chrome 브라우저로 접속합니다.
+2. 주소창 옆의 **메뉴(⋮)** 버튼을 누릅니다.
+3. **"홈 화면에 추가"** 또는 **"앱 설치"**를 선택합니다.
+4. 설치된 아이콘을 통해 전체 화면으로 앱을 실행합니다.
+
+### iOS (Safari)
+1. Safari 브라우저로 접속합니다.
+2. 하단의 **공유** 버튼을 누릅니다.
+3. **"홈 화면에 추가"**를 선택합니다.
+4. 홈 화면에 생성된 아이콘을 눌러 실행합니다.
+
+---
+
+## 🛠 사용된 기술 스택 (Tech Stack)
+
+### Frontend
+- **React 19**: 최신 리액트 기능을 활용한 컴포넌트 구조.
+- **TypeScript**: 안정적인 타입 시스템 적용.
+- **Vite**: 초고속 빌드 및 개발 서버 환경.
+
+### Styling & UI
+- **Vanilla CSS & CSS Variables**: 유연한 테마핑과 글래스모피즘 효과 구현.
+- **Framer Motion**: 부드러운 화면 전환 및 인터랙션 애니메이션.
+- **Lucide React**: 깔끔하고 통일감 있는 아이콘 시스템.
+
+### Data & Logic
+- **Dexie.js**: IndexedDB를 쉽게 다루기 위한 래퍼 라이브러리 (로컬 데이터베이스).
+- **Date-fns**: 강력하고 가벼운 날짜 처리 라이브러리.
+- **Tesseract.js**: 클라이언트 사이드 OCR(광학 문자 인식) 기능.
+- **Web Speech API**: 브라우저 내장 음성 인식 API 활용.
+
+---
+
+## 🚀 설치 및 실행 (Development)
+
+프로젝트를 로컬에서 실행하려면 다음 단계가 필요합니다.
+
+### 1. 사전 요구사항
+- Node.js (v18 이상 권장)
+- npm 또는 yarn
+
+### 2. 프로젝트 클론 및 의존성 설치
+```bash
+git clone https://github.com/ankijung88-cloud/ToDoList.git
+cd ToDoList
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 3. 개발 서버 실행
+```bash
+npm run dev
 ```
+브라우저에서 `http://localhost:5173`으로 접속하여 확인합니다.
+
+### 4. 프로덕션 빌드
+```bash
+npm run build
+```
+`dist` 폴더에 최적화된 빌드 파일이 생성됩니다.
+
+---
+
+## 📁 인터렉션 구조
+
+1. **메인 화면 (오늘)**:
+   - 상단 헤더: 날짜 표시 및 달력/리스트 뷰 전환.
+   - 입력 바: 제목 입력, 음성/이모지 버튼. (상세 입력은 클릭 시 모달 확장)
+   - 리스트: 오늘의 할 일 목록.
+
+2. **미완료 탭**:
+   - 과거의 미완료 항목들을 날짜별로 모아보고, 완료 처리하거나 삭제 가능.
+
+3. **상세 모달**:
+   - 할 일의 설명을 길게 작성하거나, 이미지를 추가/삭제.
+   - 이미지에서 텍스트 추출(OCR) 기능 실행 가능.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
